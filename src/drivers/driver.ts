@@ -6,21 +6,25 @@ export class IDriver {
 
   constructor() {}
 
-  init(
-    currentToken: Token,
-    nextToken: () => Token,
-    expect: (type: string, value?: string) => void,
-  ) {
-    this.currentToken = currentToken;
-    this.expect = expect;
+  init(nextToken: () => Token) {
     this.nextToken = nextToken;
+    // 初始化当前 token
+    this.currentToken = nextToken();
   }
 
-  updateCurrentToken(token: Token) {
-    this.currentToken = token;
+  parse() {
+    throw new Error("Method not implemented.");
   }
-
-  parse() {}
-  expect: (type: string, value?: string) => void = () => {};
+  expect(type: string, value?: string) {
+    if (
+      this.currentToken?.type !== type ||
+      (value && this.currentToken.value.toUpperCase() !== value.toUpperCase())
+    ) {
+      throw new SyntaxError(
+        `Expected token ${type}${value ? `: ${value}` : ""}, but found ${this.currentToken?.type}: ${this.currentToken?.value}`,
+      );
+    }
+    this.currentToken = this.nextToken();
+  }
   nextToken: () => Token = () => null;
 }
