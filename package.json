@@ -1,0 +1,46 @@
+{
+  "name": "sql-parser",
+  "version": "0.1.0",
+  "description": "",
+  "author": {
+    "name": "chenmijiang"
+  },
+  "contributors": [],
+  "homepage": "https://github.com/chenmijiang/sql-parser",
+  "bugs": "https://github.com/chenmijiang/sql-parser/issues",
+  "repository": "https://github.com/chenmijiang/sql-parser",
+  "license": "MIT",
+  "engines": {
+    "node": ">=10"
+  },
+  "main": "./lib/index.js",
+  "files": [
+    "lib"
+  ],
+  "scripts": {
+    "format": "prettier --loglevel warn --write \"**/*.{js,css,md}\"",
+    "posttest": "npm run format",
+    "pretest": "tsc --noEmit",
+    "build": "rollup -c rollup.config.ts --bundleConfigAsCjs --configPlugin typescript",
+    "test": "jest"
+  },
+  "keywords": [],
+  "devDependencies": {
+    "@babel/core": "^7.26.0",
+    "@babel/plugin-transform-modules-commonjs": "^7.25.9",
+    "@babel/preset-env": "^7.26.0",
+    "@rollup/plugin-babel": "^6.0.4",
+    "@rollup/plugin-commonjs": "^28.0.1",
+    "@rollup/plugin-node-resolve": "^15.3.0",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@rollup/plugin-typescript": "^12.1.1",
+    "@types/jest": "^29.5.14",
+    "jest": "^29.7.0",
+    "prettier": "^3.3.3",
+    "rollup": "^4.24.4",
+    "ts-jest": "^29.2.5",
+    "ts-node": "^10.9.2",
+    "tslib": "^2.8.1",
+    "typescript": "^5.6.3"
+  }
+}
