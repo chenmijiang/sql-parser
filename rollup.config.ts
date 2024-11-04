@@ -19,11 +19,11 @@ export default defineConfig([
 				sourceMap: false,
 			}),
 			typescript(),
-			babel({
-				babelHelpers: "bundled",
-				exclude: "node_modules/**",
-			}),
-			terser(),
+			// babel({
+			// 	babelHelpers: "bundled",
+			// 	exclude: "node_modules/**",
+			// }),
+			// terser(),
 		],
 		external: ["fs", "path"],
 	},
