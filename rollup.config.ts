@@ -48,7 +48,7 @@ export default defineConfig([
         declaration: true,
         declarationMap: false,
         outDir: "types/",
-				sourceMap: false,
+        sourceMap: false,
         include: ["src/**/*.ts"],
       }),
     ],

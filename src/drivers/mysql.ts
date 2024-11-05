@@ -132,39 +132,32 @@ class MySQLDriver extends Driver {
    * 解析查询语句 (SELECT, INSERT, UPDATE, DELETE)
    */
   private parseQuery() {
-    const ast: any = { type: "QUERY", queryType: this.currentToken?.value };
+    const ast: any = {
+      type: "DATA_MANIPULATION",
+      queryType: this.currentToken?.value,
+    };
     this.expect("KEYWORD");
 
     switch (ast.queryType) {
       case "SELECT":
         this.parseSelect(ast);
         break;
+      case "INSERT":
+        // this.parseInsert(ast);
+        break;
+      case "UPDATE":
+        // this.parseUpdate(ast);
+        break;
+      case "DELETE":
+        // this.parseDelete(ast);
+        break;
       default:
         this.error(`Unsupported query type: ${ast.queryType}`);
     }
-
-    // if (ast.queryType === "SELECT") {
-    //   this.parseSelect(ast);
-    // } else if (ast.queryType === "INSERT") {
-    //   this.parseInsert(ast);
-    // } else if (ast.queryType === "UPDATE") {
-    //   this.parseUpdate(ast);
-    // } else if (ast.queryType === "DELETE") {
-    //   this.parseDelete(ast);
-    // }
-
     return ast;
   }
 
   private parseSelect(ast: any) {
-    // this.expect("KEYWORD", "SELECT");
-
-    // ast.distinct = false;
-    // if (this.currentToken?.value.toUpperCase() === "DISTINCT") {
-    //   ast.distinct = true;
-    //   this.expect("KEYWORD", "DISTINCT");
-    // }
-
     ast.columns = this.parseColumns();
     this.expect("KEYWORD", "FROM");
     ast.table = this.parseTable();
@@ -173,55 +166,22 @@ class MySQLDriver extends Driver {
       this.currentToken &&
       this.currentToken.value.toUpperCase() === "WHERE"
     ) {
-      this.parseWhere(ast);
+      this.parseWhere();
     }
 
     // 可以继续扩展更多的 SELECT 子句：GROUP BY, HAVING, ORDER BY, LIMIT 等
   }
 
-  private parseColumns(): string[] {
-    const columns: string[] = [];
-    do {
-      if (
-        this.currentToken?.type === "IDENTIFIER" ||
-        this.currentToken?.type === "STRING"
-      ) {
-        columns.push(this.currentToken?.value ?? "");
-        this.currentToken = this.nextToken();
-      }
-      if (this.currentToken?.value === ",") {
-        this.currentToken = this.nextToken();
-      } else {
-        break;
-      }
-    } while (this.currentToken);
-    return columns;
+  private parseColumns() {
+    return [];
   }
 
   private parseTable(): string {
-    const tableName = this.currentToken?.value;
-    this.expect("IDENTIFIER");
-    return tableName ?? "";
+    return "";
   }
 
-  private parseWhere(ast: any) {
-    this.expect("KEYWORD", "WHERE");
-    ast.condition = this.parseCondition();
-  }
-
-  private parseCondition(): any {
-    // 这里可以根据具体的条件格式扩展，比如支持 AND, OR, LIKE, IN 等
-    const condition: any = {};
-    condition.left = this.currentToken?.value;
-    this.expect("IDENTIFIER");
-
-    condition.operator = this.currentToken?.value;
-    this.expect("OPERATOR");
-
-    condition.right = this.currentToken?.value;
-    this.expect("NUMBER"); // 这里只是一个简单示例
-
-    return condition;
+  private parseWhere() {
+    return [];
   }
 
   /**

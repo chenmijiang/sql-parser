@@ -27,7 +27,7 @@ export abstract class Driver {
   }
   nextToken: () => Token = () => null;
 
-  getLoc() {
+  getCurTokenLoc() {
     return this.currentToken?.loc;
   }
 
