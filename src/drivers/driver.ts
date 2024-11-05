@@ -3,8 +3,11 @@ import { Token, TokenDefinition } from "../types";
 export abstract class Driver {
   tokens: TokenDefinition[] = [];
   currentToken: Token = null;
+  nextToken: () => Token = () => null;
 
   constructor() {}
+
+  abstract parse(): any;
 
   init(nextToken: () => Token) {
     this.nextToken = nextToken;
@@ -12,7 +15,13 @@ export abstract class Driver {
     this.currentToken = nextToken();
   }
 
-  abstract parse(): any;
+  getTokenLocation(token: Token) {
+    return token?.loc;
+  }
+
+  error(message: string): never {
+    throw new SyntaxError(message);
+  }
 
   expect(type: string, value?: string) {
     if (
@@ -23,15 +32,5 @@ export abstract class Driver {
         `Expected token ${type}${value ? `: ${value}` : ""}, but found ${this.currentToken?.type}: ${this.currentToken?.value}`,
       );
     }
-    this.currentToken = this.nextToken();
-  }
-  nextToken: () => Token = () => null;
-
-  getCurTokenLoc() {
-    return this.currentToken?.loc;
-  }
-
-  error(message: string): never {
-    throw new SyntaxError(message);
   }
 }
