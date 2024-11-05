@@ -10,221 +10,296 @@ class MySQLDriver extends Driver {
    */
   tokens = [
     { regex: /\s+/, type: null }, // 忽略空格
+    // 关键字和操作符合并
     {
       regex:
-        /SELECT|FROM|WHERE|INSERT|UPDATE|DELETE|AND|OR|NOT|LIKE|BETWEEN|IN|HAVING|GROUP BY|ORDER BY|LIMIT|OFFSET|UNION|JOIN|INNER JOIN|LEFT JOIN|RIGHT JOIN|CROSS JOIN|AS|CASE|WHEN|THEN|ELSE|END|CREATE|DROP|ALTER|TABLE|INDEX|VIEW|PROCEDURE|FUNCTION|TRIGGER|DATABASE|SCHEMA|GRANT|REVOKE|ROLLBACK|COMMIT|START TRANSACTION|SAVEPOINT/i,
+        /CREATE|DROP|ALTER|DATABASE|SCHEMA|USE|GRANT|REVOKE|COMMIT|ROLLBACK|SAVEPOINT|START TRANSACTION|SHOW|TABLE|INDEX|VIEW|PROCEDURE|FUNCTION|TRIGGER|INSERT|UPDATE|DELETE|REPLACE|TRUNCATE|MERGE|SELECT|FROM|WHERE|HAVING|GROUP BY|ORDER BY|LIMIT|OFFSET|UNION|JOIN|INNER JOIN|LEFT JOIN|RIGHT JOIN|CROSS JOIN|ON|AS|DISTINCT|CASE|WHEN|THEN|ELSE|END|IFNULL|COALESCE|CAST|CONVERT|IS|EXISTS|BETWEEN|IN|NOT|LIKE|ALL|ANY|COUNT|SUM|AVG|MIN|MAX|CONCAT|SUBSTRING|TRIM|UPPER|LOWER|DATE_FORMAT|DATE_ADD|DATE_SUB|NOW|YEAR|MONTH|DAY|HOUR|MINUTE|SECOND|GROUP_CONCAT|IF|SELECT DATABASE|SELECT SCHEMA/i,
       type: "KEYWORD",
     },
+    // 函数合并
     {
       regex:
         /COUNT|SUM|AVG|MIN|MAX|CONCAT|SUBSTRING|TRIM|UPPER|LOWER|DATE_FORMAT|DATE_ADD|DATE_SUB|NOW|YEAR|MONTH|DAY|HOUR|MINUTE|SECOND|IF|IFNULL|COALESCE|CAST|CONVERT|GROUP_CONCAT/i,
       type: "FUNCTION",
     },
-    { regex: /`[a-zA-Z0-9_]+`/, type: "IDENTIFIER" }, // 反引号标识符
-    { regex: /[a-zA-Z_][a-zA-Z0-9_]*/, type: "IDENTIFIER" }, // 普通标识符
-    { regex: /'([^'\\]*(\\.)?)*'/, type: "STRING" }, // 字符串常量
-    { regex: /"([^"\\]*(\\.)?)*"/, type: "STRING" }, // 双引号字符串
+    // 标识符合并（表名、字段名、字段别名）
+    { regex: /`[a-zA-Z0-9_]+`|[a-zA-Z_][a-zA-Z0-9_]*/, type: "IDENTIFIER" },
+    // 字符串常量
+    { regex: /'([^'\\]*(\\.)?)*'|"([^"\\]*(\\.)?)*"/, type: "STRING" },
+    // 日期时间
     { regex: /\d{4}-\d{2}-\d{2}(\s\d{2}:\d{2}:\d{2})?/, type: "DATETIME" }, // 日期时间
-    { regex: /\d*\.\d+|\d+\.\d*/, type: "DECIMAL" }, // 小数
-    { regex: /\d+/, type: "NUMBER" }, // 整数
+    // 数字（整数和小数）
+    { regex: /\d*\.\d+|\d+/, type: "NUMBER" }, // 小数和整数
+    // 比较运算符
     { regex: /[=<>!]+/, type: "OPERATOR" }, // 比较运算符
+    // 逻辑运算符
     { regex: /\|\||&&/, type: "LOGICAL_OPERATOR" }, // 逻辑运算符
+    // 标点符号
     { regex: /[();,]/, type: "PUNCTUATION" }, // 标点符号
+    // 算术运算符
     { regex: /[+*/-]/, type: "ARITHMETIC_OPERATOR" }, // 算术运算符
+    // 括号
     { regex: /\[|\]|\{|\}/, type: "BRACKET" }, // 括号
+    // 变量标识符
     { regex: /\$/, type: "VARIABLE" }, // 变量标识符
+    // 数据库操作：查看、切换、删除
+    {
+      regex: /SHOW TABLES|SHOW COLUMNS|DESCRIBE|USE/i,
+      type: "KEYWORD_SHOW_DATABASE",
+    },
+    // 表操作：创建、修改、删除
+    {
+      regex:
+        /CREATE TABLE|ALTER TABLE|DROP TABLE|RENAME TABLE|TRUNCATE TABLE|DESCRIBE TABLE/i,
+      type: "KEYWORD_TABLE_MANIPULATION",
+    },
+    // 数据操作：增、删、改、查
+    {
+      regex: /INSERT INTO|UPDATE|DELETE FROM|SELECT FROM/i,
+      type: "KEYWORD_DATA_MANIPULATION",
+    },
+    // 表/字段别名
+    { regex: /AS/i, type: "KEYWORD_ALIAS" },
+    // 子查询标识符
+    { regex: /\((?:[^()]*|\([^()]*\))*\)/, type: "SUBQUERY" },
+    // 限制查询：LIMIT、OFFSET
+    { regex: /LIMIT|OFFSET/, type: "KEYWORD_LIMIT_OFFSET" },
+    // 连接查询：JOIN
+    {
+      regex: /JOIN|INNER JOIN|LEFT JOIN|RIGHT JOIN|CROSS JOIN|OUTER JOIN|ON/i,
+      type: "KEYWORD_JOIN",
+    },
+    // 索引相关：创建、删除、修改索引
+    {
+      regex: /CREATE INDEX|DROP INDEX|ALTER INDEX|ADD INDEX/i,
+      type: "KEYWORD_INDEX",
+    },
   ];
 
+  /**
+   * 解析 SQL 语句
+   */
   parse() {
-    switch (this.currentToken?.type) {
-      case "KEYWORD":
-        switch (this.currentToken.value.toUpperCase()) {
-          case "SELECT":
-            return this.parseSelect();
-          case "INSERT":
-            return this.parseInsert();
-          case "UPDATE":
-            return this.parseUpdate();
-          case "DELETE":
-            return this.parseDelete();
-          default:
-            throw new SyntaxError(
-              `Unsupported statement: ${this.currentToken.value}`,
-            );
+    const ast = this.parseStatement();
+    if (this.currentToken) {
+      this.error(
+        `Unexpected token found after statement: ${this.currentToken.type} - ${this.currentToken.value}`,
+      );
+    }
+    return ast;
+  }
+
+  /**
+   * 解析 SQL 语句的不同类型
+   * 这里可以根据你的 SQL 语法来扩展
+   */
+  private parseStatement() {
+    const HANDLERS = {
+      // 数据操作语句
+      DML: {
+        keywords: ["SELECT", "INSERT", "UPDATE", "DELETE"],
+        handler: () => this.parseQuery(),
+      },
+      // 数据定义语句
+      DDL: {
+        keywords: ["CREATE", "ALTER", "DROP", "TABLE", "DATABASE"],
+        handler: () => this.parseDDL(),
+      },
+      // 数据库管理语句
+      ADMIN: {
+        keywords: ["USE", "SHOW"],
+        handler: () => this.parseDatabaseOperation(),
+      },
+    };
+
+    if (this.currentToken?.type === "KEYWORD") {
+      const currentValue = this.currentToken.value.toUpperCase();
+
+      for (const { keywords, handler } of Object.values(HANDLERS)) {
+        if (keywords.includes(currentValue)) {
+          return handler();
         }
+      }
+
+      this.error(`Unsupported statement: ${this.currentToken.value}`);
+    }
+    this.error(
+      `Unexpected statement: ${this.currentToken?.type} - ${this.currentToken?.value}`,
+    );
+  }
+
+  /**
+   * 解析查询语句 (SELECT, INSERT, UPDATE, DELETE)
+   */
+  private parseQuery() {
+    const ast: any = { type: "QUERY", queryType: this.currentToken?.value };
+    this.expect("KEYWORD");
+
+    switch (ast.queryType) {
+      case "SELECT":
+        this.parseSelect(ast);
+        break;
       default:
-        throw new SyntaxError("Expected a statement");
+        this.error(`Unsupported query type: ${ast.queryType}`);
     }
+
+    // if (ast.queryType === "SELECT") {
+    //   this.parseSelect(ast);
+    // } else if (ast.queryType === "INSERT") {
+    //   this.parseInsert(ast);
+    // } else if (ast.queryType === "UPDATE") {
+    //   this.parseUpdate(ast);
+    // } else if (ast.queryType === "DELETE") {
+    //   this.parseDelete(ast);
+    // }
+
+    return ast;
   }
 
-  parseSelect() {
-    this.expect("KEYWORD", "SELECT");
-    const columns = this.parseColumns();
+  private parseSelect(ast: any) {
+    // this.expect("KEYWORD", "SELECT");
+
+    // ast.distinct = false;
+    // if (this.currentToken?.value.toUpperCase() === "DISTINCT") {
+    //   ast.distinct = true;
+    //   this.expect("KEYWORD", "DISTINCT");
+    // }
+
+    ast.columns = this.parseColumns();
     this.expect("KEYWORD", "FROM");
-    const table = this.parseTable();
-    const joins = this.parseJoins();
-    const where = this.parseWhere();
-    return { type: "SELECT", columns, table, joins, where };
-  }
+    ast.table = this.parseTable();
 
-  parseInsert() {
-    this.expect("KEYWORD", "INSERT");
-    this.expect("KEYWORD", "INTO");
-    const table = this.parseTable();
-    const columns = this.parseInsertColumns();
-    this.expect("KEYWORD", "VALUES");
-    const values = this.parseInsertValues();
-    return { type: "INSERT", table, columns, values };
-  }
-
-  parseUpdate() {
-    this.expect("KEYWORD", "UPDATE");
-    const table = this.parseTable();
-    this.expect("KEYWORD", "SET");
-    const updates = this.parseUpdates();
-    const where = this.parseWhere();
-    return { type: "UPDATE", table, updates, where };
-  }
-
-  parseDelete() {
-    this.expect("KEYWORD", "DELETE");
-    this.expect("KEYWORD", "FROM");
-    const table = this.parseTable();
-    const where = this.parseWhere();
-    return { type: "DELETE", table, where };
-  }
-
-  parseColumns() {
-    const columns = [];
-    while (
-      this.currentToken &&
-      (this.currentToken.type === "IDENTIFIER" ||
-        this.currentToken.type === "FUNCTION")
-    ) {
-      columns.push(this.currentToken.value);
-      this.currentToken = this.nextToken();
-      if (
-        this.currentToken &&
-        this.currentToken.type === "PUNCTUATION" &&
-        this.currentToken.value === ","
-      ) {
-        this.currentToken = this.nextToken();
-      }
-    }
-    return columns;
-  }
-
-  parseInsertColumns() {
-    this.expect("PUNCTUATION", "(");
-    const columns = this.parseColumns();
-    this.expect("PUNCTUATION", ")");
-    return columns;
-  }
-
-  parseInsertValues() {
-    this.expect("PUNCTUATION", "(");
-    const values = this.parseValues();
-    this.expect("PUNCTUATION", ")");
-    return values;
-  }
-
-  parseValues() {
-    const values = [];
-    while (
-      this.currentToken &&
-      (this.currentToken.type === "STRING" ||
-        this.currentToken.type === "NUMBER")
-    ) {
-      values.push(this.currentToken.value);
-      this.currentToken = this.nextToken();
-      if (
-        this.currentToken &&
-        this.currentToken.type === "PUNCTUATION" &&
-        this.currentToken.value === ","
-      ) {
-        this.currentToken = this.nextToken();
-      }
-    }
-    return values;
-  }
-
-  parseUpdates() {
-    const updates = [];
-    while (this.currentToken && this.currentToken.type === "IDENTIFIER") {
-      const column = this.currentToken.value;
-      this.expect("IDENTIFIER");
-      this.expect("OPERATOR");
-      const value = this.currentToken.value;
-      this.expect("STRING"); // Assuming only strings for simplicity; adjust as needed.
-      updates.push({ column, value });
-      if (
-        this.currentToken &&
-        // @ts-ignore
-        this.currentToken.type === "PUNCTUATION" &&
-        this.currentToken.value === ","
-      ) {
-        this.currentToken = this.nextToken();
-      }
-    }
-    return updates;
-  }
-
-  parseTable() {
-    const tableName = this.currentToken?.value;
-    this.expect("IDENTIFIER");
-
-    let alias = null;
     if (
       this.currentToken &&
-      this.currentToken.type === "KEYWORD" &&
-      this.currentToken.value.toUpperCase() === "AS"
-    ) {
-      this.currentToken = this.nextToken(); // 处理 AS
-      alias = this.currentToken?.value;
-      this.expect("IDENTIFIER");
-    }
-
-    return { name: tableName, alias };
-  }
-
-  parseJoins() {
-    const joins = [];
-    while (
-      this.currentToken &&
-      this.currentToken.type === "KEYWORD" &&
-      /JOIN/i.test(this.currentToken.value)
-    ) {
-      const joinType = this.currentToken.value.toUpperCase();
-      this.currentToken = this.nextToken(); // 处理 JOIN
-      const table = this.parseTable();
-      this.expect("KEYWORD", "ON");
-      const condition = this.parseCondition(); // 解析 JOIN 条件
-      joins.push({ type: joinType, table, condition });
-    }
-    return joins;
-  }
-
-  parseWhere() {
-    if (
-      this.currentToken &&
-      this.currentToken.type === "KEYWORD" &&
       this.currentToken.value.toUpperCase() === "WHERE"
     ) {
-      this.currentToken = this.nextToken(); // 处理 WHERE
-      return this.parseCondition(); // 解析条件
+      this.parseWhere(ast);
     }
-    return null;
+
+    // 可以继续扩展更多的 SELECT 子句：GROUP BY, HAVING, ORDER BY, LIMIT 等
   }
 
-  parseCondition() {
-    const left = this.currentToken?.value;
-    this.expect("IDENTIFIER");
-    const operator = this.currentToken?.value;
-    this.expect("OPERATOR");
-    const right = this.currentToken?.value;
-    this.expect("IDENTIFIER"); // 可以根据需要调整
+  private parseColumns(): string[] {
+    const columns: string[] = [];
+    do {
+      if (
+        this.currentToken?.type === "IDENTIFIER" ||
+        this.currentToken?.type === "STRING"
+      ) {
+        columns.push(this.currentToken?.value ?? "");
+        this.currentToken = this.nextToken();
+      }
+      if (this.currentToken?.value === ",") {
+        this.currentToken = this.nextToken();
+      } else {
+        break;
+      }
+    } while (this.currentToken);
+    return columns;
+  }
 
-    return { left, operator, right };
+  private parseTable(): string {
+    const tableName = this.currentToken?.value;
+    this.expect("IDENTIFIER");
+    return tableName ?? "";
+  }
+
+  private parseWhere(ast: any) {
+    this.expect("KEYWORD", "WHERE");
+    ast.condition = this.parseCondition();
+  }
+
+  private parseCondition(): any {
+    // 这里可以根据具体的条件格式扩展，比如支持 AND, OR, LIKE, IN 等
+    const condition: any = {};
+    condition.left = this.currentToken?.value;
+    this.expect("IDENTIFIER");
+
+    condition.operator = this.currentToken?.value;
+    this.expect("OPERATOR");
+
+    condition.right = this.currentToken?.value;
+    this.expect("NUMBER"); // 这里只是一个简单示例
+
+    return condition;
+  }
+
+  /**
+   * 解析 DDL 语句 (CREATE, ALTER, DROP 等)
+   */
+  private parseDDL() {
+    const ast: any = { type: "DDL", action: this.currentToken?.value };
+    this.expect("KEYWORD");
+
+    if (ast.action === "CREATE") {
+      this.parseCreate(ast);
+    } else if (ast.action === "DROP") {
+      this.parseDrop(ast);
+    }
+
+    return ast;
+  }
+
+  private parseCreate(ast: any) {
+    this.expect("KEYWORD", "TABLE");
+    ast.table = this.parseTable();
+    ast.columns = this.parseColumnsDefinition();
+  }
+
+  private parseColumnsDefinition(): any[] {
+    const columns: any[] = [];
+    this.expect("PUNCTUATION", "(");
+
+    while (
+      this.currentToken &&
+      this.currentToken.type !== "PUNCTUATION" &&
+      this.currentToken.value !== ")"
+    ) {
+      const column: any = {
+        name: this.currentToken?.value,
+        type: this.parseColumnType(),
+      };
+      columns.push(column);
+      this.currentToken = this.nextToken();
+
+      if (this.currentToken?.value === ",") {
+        this.currentToken = this.nextToken();
+      }
+    }
+    this.expect("PUNCTUATION", ")");
+    return columns;
+  }
+
+  private parseColumnType(): string {
+    const type = this.currentToken?.value;
+    this.expect("IDENTIFIER");
+    return type ?? "";
+  }
+
+  private parseDrop(ast: any) {
+    this.expect("KEYWORD", "TABLE");
+    ast.table = this.parseTable();
+  }
+
+  /**
+   * 解析数据库相关操作 (USE, SHOW 等)
+   */
+  private parseDatabaseOperation() {
+    const ast: any = {
+      type: "DATABASE_OPERATION",
+      operation: this.currentToken?.value,
+    };
+    this.expect("KEYWORD");
+
+    if (ast.operation === "USE") {
+      ast.database = this.currentToken?.value;
+      this.expect("IDENTIFIER");
+    } else if (ast.operation === "SHOW") {
+      ast.showType = this.currentToken?.value;
+      this.expect("KEYWORD");
+    }
+
+    return ast;
   }
 }
 

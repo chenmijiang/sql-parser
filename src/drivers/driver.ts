@@ -1,7 +1,7 @@
-import { ITokenDefinition, Token } from "../types";
+import { Token, TokenDefinition } from "../types";
 
-export class Driver {
-  tokens: ITokenDefinition[] = [];
+export abstract class Driver {
+  tokens: TokenDefinition[] = [];
   currentToken: Token = null;
 
   constructor() {}
@@ -12,19 +12,26 @@ export class Driver {
     this.currentToken = nextToken();
   }
 
-  parse() {
-    throw new Error("Method not implemented.");
-  }
+  abstract parse(): any;
+
   expect(type: string, value?: string) {
     if (
       this.currentToken?.type !== type ||
       (value && this.currentToken.value.toUpperCase() !== value.toUpperCase())
     ) {
-      throw new SyntaxError(
+      this.error(
         `Expected token ${type}${value ? `: ${value}` : ""}, but found ${this.currentToken?.type}: ${this.currentToken?.value}`,
       );
     }
     this.currentToken = this.nextToken();
   }
   nextToken: () => Token = () => null;
+
+  getLoc() {
+    return this.currentToken?.loc;
+  }
+
+  error(message: string): never {
+    throw new SyntaxError(message);
+  }
 }

@@ -28,14 +28,4 @@ export class SQLCompiler {
   compile() {
     return this.parser.parse();
   }
-
-  /**
-   * 遍历 AST
-   */
-  traverse(ast: any, callback: (node: any) => void) {}
-
-  /**
-   * 生成 SQL
-   */
-  generate(ast: any) {}
 }
