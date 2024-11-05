@@ -15,13 +15,16 @@
   },
   "main": "./lib/index.js",
   "files": [
-    "lib"
+    "lib",
+    "types"
   ],
+  "types": "./types/index.d.ts",
   "scripts": {
     "format": "prettier --loglevel warn --write \"**/*.{js,css,md}\"",
     "posttest": "npm run format",
     "pretest": "tsc --noEmit",
     "build": "rollup -c rollup.config.ts --bundleConfigAsCjs --configPlugin typescript",
+    "build:prod": "NODE_ENV=production npm run build",
     "test": "jest"
   },
   "keywords": [],
@@ -29,6 +32,7 @@
     "@babel/core": "^7.26.0",
     "@babel/plugin-transform-modules-commonjs": "^7.25.9",
     "@babel/preset-env": "^7.26.0",
+    "@rollup/plugin-alias": "^5.1.1",
     "@rollup/plugin-babel": "^6.0.4",
     "@rollup/plugin-commonjs": "^28.0.1",
     "@rollup/plugin-node-resolve": "^15.3.0",

@@ -1,6 +1,6 @@
 import { ITokenDefinition, Token } from "../types";
 
-export class IDriver {
+export class Driver {
   tokens: ITokenDefinition[] = [];
   currentToken: Token = null;
 

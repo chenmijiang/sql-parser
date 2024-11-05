@@ -1,2 +1,2 @@
-export { default as SQLCompiler } from "./compiler";
+export { SQLCompiler } from "./compiler";
 export * from "./types";

@@ -1,5 +1,5 @@
 import { drivers } from "./drivers";
-import { IDriver } from "./drivers/driver";
+import { Driver } from "./drivers/driver";
 import Lexer from "./lexer";
 import Parser from "./parser";
 import { DriverName } from "./types";
@@ -7,10 +7,10 @@ import { DriverName } from "./types";
 /**
  * 编译器
  */
-class SQLCompiler {
+export class SQLCompiler {
   private lexer: Lexer;
   private parser: Parser;
-  private driverInstance: IDriver;
+  private driverInstance: Driver;
 
   constructor(sql: string, driverName: DriverName = "mysql") {
     if (!drivers[driverName]) {
@@ -39,5 +39,3 @@ class SQLCompiler {
    */
   generate(ast: any) {}
 }
-
-export default SQLCompiler;

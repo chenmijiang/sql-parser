@@ -1,14 +1,13 @@
-import { IDriver } from "./drivers/driver";
+import { Driver } from "./drivers/driver";
 import Lexer from "./lexer";
-import { Token } from "./types";
 
 /**
  * 语法分析器
  */
 class Parser {
-  private driver: IDriver;
+  private driver: Driver;
 
-  constructor(lexer: Lexer, driver: IDriver) {
+  constructor(lexer: Lexer, driver: Driver) {
     this.driver = driver;
 
     this.driver.init(lexer.nextToken.bind(lexer));

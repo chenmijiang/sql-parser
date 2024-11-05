@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "es6",
-    "module": "commonjs",
+    "module": "ESNext",
     "moduleResolution": "node",
     "strict": true,
     "experimentalDecorators": true,
@@ -25,7 +25,6 @@
   },
   "include": [
     "src/**/*.ts",
-    "types/**/*.d.ts",
     "__tests__/**/*.ts"
   ]
 }

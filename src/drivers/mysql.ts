@@ -1,6 +1,6 @@
-import { IDriver } from "./driver";
+import { Driver } from "./driver";
 
-class MySQLDriver extends IDriver {
+class MySQLDriver extends Driver {
   constructor() {
     super();
   }
