@@ -109,14 +109,8 @@ class MySQLDriver extends Driver {
     super();
   }
 
-  /**
-   * 词法分析 token 定义
-   */
   tokens = TOKENS;
 
-  /**
-   * 解析 SQL 语句
-   */
   parse() {
     const ast = this.parseStatement();
     if (this.currentToken) {
@@ -150,14 +144,15 @@ class MySQLDriver extends Driver {
     };
 
     if (this.currentToken?.type === TOKEN_TYPES.KEYWORD) {
-      const currentValue = this.currentToken.value.toUpperCase();
+      const upperValue = this.currentToken.upperValue;
 
       for (const [type, { keywords, handler }] of Object.entries(HANDLERS)) {
-        if (keywords.includes(currentValue)) {
+        if (keywords.includes(upperValue)) {
           let ast = {
             driver: "mysql",
             statementType: type,
-            operationType: currentValue,
+            operationType: upperValue,
+            body: {},
           };
           handler(ast);
           return ast;
@@ -175,13 +170,11 @@ class MySQLDriver extends Driver {
    * 解析查询语句 (SELECT, INSERT, UPDATE, DELETE)
    */
   private parseDML(ast: any) {
-    this.expect("KEYWORD");
-
     const HANDLERS: Record<string, (ast: any) => void> = {
       SELECT: this.parseSelect,
-      // INSERT: this.parseInsert,
-      // UPDATE: this.parseUpdate,
-      // DELETE: this.parseDelete,
+      INSERT: this.parseInsert,
+      UPDATE: this.parseUpdate,
+      DELETE: this.parseDelete,
     };
 
     if (HANDLERS[ast.operationType]) {
@@ -192,107 +185,24 @@ class MySQLDriver extends Driver {
   }
 
   private parseSelect(ast: any) {
-    
-    ast.columns = this.parseColumns();
-    this.expect("KEYWORD", "FROM");
-    ast.table = this.parseTable();
-
-    if (
-      this.currentToken &&
-      this.currentToken.value.toUpperCase() === "WHERE"
-    ) {
-      this.parseWhere();
-    }
-
-    // 可以继续扩展更多的 SELECT 子句：GROUP BY, HAVING, ORDER BY, LIMIT 等
+    // 
   }
 
-  private parseColumns() {
-    return [];
-  }
+  private parseInsert(ast: any) {}
 
-  private parseTable(): string {
-    return "";
-  }
+  private parseUpdate(ast: any) {}
 
-  private parseWhere() {
-    return [];
-  }
+  private parseDelete(ast: any) {}
 
   /**
    * 解析 DDL 语句 (CREATE, ALTER, DROP 等)
    */
-  private parseDDL(ast: any) {
-    ast.action = this.currentToken?.value;
-    this.expect("KEYWORD");
-
-    if (ast.action === "CREATE") {
-      this.parseCreate(ast);
-    } else if (ast.action === "DROP") {
-      this.parseDrop(ast);
-    }
-
-    return ast;
-  }
-
-  private parseCreate(ast: any) {
-    this.expect("KEYWORD", "TABLE");
-    ast.table = this.parseTable();
-    ast.columns = this.parseColumnsDefinition();
-  }
-
-  private parseColumnsDefinition(): any[] {
-    const columns: any[] = [];
-    this.expect("PUNCTUATION", "(");
-
-    while (
-      this.currentToken &&
-      this.currentToken.type !== "PUNCTUATION" &&
-      this.currentToken.value !== ")"
-    ) {
-      const column: any = {
-        name: this.currentToken?.value,
-        type: this.parseColumnType(),
-      };
-      columns.push(column);
-      this.currentToken = this.nextToken();
-
-      if (this.currentToken?.value === ",") {
-        this.currentToken = this.nextToken();
-      }
-    }
-    this.expect("PUNCTUATION", ")");
-    return columns;
-  }
-
-  private parseColumnType(): string {
-    const type = this.currentToken?.value;
-    this.expect("IDENTIFIER");
-    return type ?? "";
-  }
-
-  private parseDrop(ast: any) {
-    this.expect("KEYWORD", "TABLE");
-    ast.table = this.parseTable();
-  }
+  private parseDDL(ast: any) {}
 
   /**
    * 解析数据库相关操作 (USE, SHOW 等)
    */
-  private parseDatabaseOperation(ast: any) {
-    ast.operation = this.currentToken?.value;
-    this.expect("KEYWORD");
-
-    if (ast.operation === "USE") {
-      ast.database = this.currentToken?.value;
-      this.expect("IDENTIFIER");
-    } else if (ast.operation === "SHOW") {
-      ast.showType = this.currentToken?.value;
-      this.expect("KEYWORD");
-    }
-
-    return ast;
-  }
+  private parseDatabaseOperation(ast: any) {}
 }
 
 export default MySQLDriver;

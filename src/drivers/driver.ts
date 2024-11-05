@@ -26,7 +26,7 @@ export abstract class Driver {
   expect(type: string, value?: string) {
     if (
       this.currentToken?.type !== type ||
-      (value && this.currentToken.value.toUpperCase() !== value.toUpperCase())
+      (value && this.currentToken.upperValue !== value.toUpperCase())
     ) {
       this.error(
         `Expected token ${type}${value ? `: ${value}` : ""}, but found ${this.currentToken?.type}: ${this.currentToken?.value}`,
