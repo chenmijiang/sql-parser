@@ -2,7 +2,9 @@ import { SQLCompiler } from "@/index";
 
 describe("Lexer", () => {
   it("should be defined", () => {
-    const compiler = new SQLCompiler("   SELECT a, b FROM students   ");
+    const compiler = new SQLCompiler(
+      "   SELECT a, b, c as d, count(e) FROM students   ",
+    );
 
     const ast = compiler.compile();
 

@@ -5,27 +5,36 @@ export interface TokenDefinition {
   type: string | null;
 }
 
-export type TokenLoc = {
+export type TokenLocParams = {
   line: number;
   index: number;
   column: number;
 };
 
+export interface GenerateLocParams {
+  startIndex: number;
+  startLine: number;
+  startColumn: number;
+  endIndex: number;
+  endLine: number;
+  endColumn: number;
+}
+
+export interface TokenLoc {
+  start: TokenLocParams;
+  end: TokenLocParams;
+}
+
 export type Token = {
   type: string;
   value: string;
-  loc: {
-    start: TokenLoc;
-    end: TokenLoc;
-  };
+  upperValue: string;
+  loc: TokenLoc;
 } | null;
 
 export interface AST {
   type: string;
   value: string;
-  loc: {
-    start: TokenLoc;
-    end: TokenLoc;
-  };
+  loc: TokenLoc;
   children: AST[];
 }
